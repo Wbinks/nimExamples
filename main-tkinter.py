@@ -1,95 +1,137 @@
-import pygame_functions as pg
+import tkinter as tk
+from tkinter import font as tkFont
+import random
 
-pg.screenSize(900,900,50,50)
-pg.setBackgroundColour("lightgreen")
-pg.setAutoUpdate(False)
+class NimGame(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        self.geometry("950x900+450+0")
+        self.title("Nim Game vs Computer")
+        
+        self.theCanvas = tk.Canvas(self, width=800, height=900, bg="#ddddff")
+        self.theCanvas.grid(row=0, column=0)
+        self.buttonfont = tkFont.Font(family="Consolas", weight="bold")
 
-# put screen elements here, so they are global
-infoLabel = pg.makeLabel("Info here",40,30,30,"black","Consolas")
-pg.showLabel(infoLabel)
-submitbutton = pg.makeSprite("submit.png")
-pg.moveSprite(submitbutton,600,100,centre=True)
-pg.showSprite(submitbutton)
-undo = pg.makeSprite("undo.png")
-pg.moveSprite(undo,800,100,centre=True)
-pg.showSprite(undo)
+        self.reset_button = tk.Button(self, text="Reset Game", font=self.buttonfont, command=self.reset_game)
+        self.reset_button.grid(row=0, column=1)
 
-stonesound = pg.makeSound("lay2.wav")
-badsound = pg.makeSound("bad.wav")
-goodsound = pg.makeSound("good.wav")
-clicksound = pg.makeSound("click.wav")
+        self.theCanvas.bind("<Motion>", self.mouseMoved)
+        self.theCanvas.bind("<Button-1>", self.mouseClicked)
 
+        self.canvasbutton = self.theCanvas.create_rectangle(150, 800, 250, 850, fill="blue", outline="black")
+        self.theCanvas.create_text(200, 825, text="End Turn", font=self.buttonfont, fill="white")
+        self.theCanvas.tag_bind(self.canvasbutton, "<Button-1>", self.canvasButtonClicked)
+        
+        self.movetext = None
+        self.clickText = None
+        self.buttonText = None
+        self.turn_text = None
+        self.stones = []
+        self.is_player_turn = True
+        self.selected_stones = 0
+        
+        self.DrawStones()
+        self.update_turn_display()
+        self.mainloop()
 
-def drawScreen(piles,numberchosen,pilechosen):
-    # code to draw the stones
-    y = 300
-    x = 100
-    pg.clearShapes()
-    for pilenum in range(len(piles)):
-        if pilenum == pilechosen:
-            reduction = numberchosen
-        else:
-            reduction = 0
-        for stoneNum in range(piles[pilenum]-reduction):
-            pg.drawEllipse(x,y,70,50,"blue")
-            y += 50
-        x += 200
-        y = 300
-    pg.updateDisplay()
+    def DrawStones(self):
+        self.piles = [7, 5, 3, 1]
+        x = 100
+        self.stones = []
+        
+        for pile_idx, pilesize in enumerate(self.piles):
+            pile_stones = []
+            y = 100
+            for i in range(pilesize):
+                stone = self.theCanvas.create_oval(x-20, y-20, x+20, y+20, fill="gray", tags=f"pile{pile_idx}")
+                self.theCanvas.tag_bind(stone, "<Button-1>", lambda e, p=pile_idx: self.select_stone(p))
+                pile_stones.append(stone)
+                y += 50
+            self.stones.append(pile_stones)
+            x += 100
 
-def setupGame():
-    # create the data structure for a new game
-    piles = [7,5,3,1]
-    return piles
+    def select_stone(self, pile_idx):
+        if self.is_player_turn and self.piles[pile_idx] > 0:
+            self.selected_stones += 1
+            self.piles[pile_idx] -= 1
+            stone = self.stones[pile_idx].pop()
+            self.theCanvas.delete(stone)
+            self.update_status(f"Player removed stone from pile {pile_idx + 1}")
 
+    def computer_move(self):
+        # Simple AI: Remove 1-3 stones from a random non-empty pile
+        available_piles = [i for i, size in enumerate(self.piles) if size > 0]
+        if not available_piles:
+            return
+        
+        pile = random.choice(available_piles)
+        stones_to_remove = min(random.randint(1, 3), self.piles[pile])
+        
+        for _ in range(stones_to_remove):
+            if self.piles[pile] > 0:
+                self.piles[pile] -= 1
+                stone = self.stones[pile].pop()
+                self.theCanvas.delete(stone)
+        
+        self.update_status(f"Computer removed {stones_to_remove} stone(s) from pile {pile + 1}")
+        self.after(1000, self.check_game_state)  # Delay to show computer's move
+        self.is_player_turn = True
+        self.update_turn_display()
 
-def playerMove():
-    # code to track mouse movements and do actions, then return their move
-    moveMade = False
-    pilechosen=None
-    numberchosen = 0
-    pg.changeLabel(infoLabel, f"Your move")
-    while not moveMade:
-        if pg.spriteClicked(submitbutton):
-            if pilechosen is not None and numberchosen > 0: 
-                pg.playSound(goodsound)   
-                return pilechosen, numberchosen
-            else:
-                pg.changeLabel(infoLabel,"You must select some stones")
-                pg.playSound(badsound)
-        elif pg.spriteClicked(undo):
-            pg.changeLabel(infoLabel, f"Undo clicked")
-            pg.playSound(clicksound)
-            pilechosen = None
-            numberchosen = 0
-        elif pg.mousePressed():
-            #clicked in the screen
-            column = (pg.mouseX())//200
-            if pilechosen is None:
-                pilechosen = column
-            if column == pilechosen:
-                numberchosen +=1
-                if piles[pilechosen]<numberchosen:
-                    numberchosen = piles[pilechosen]
-                pg.playSound(stonesound)
-                pg.changeLabel(infoLabel,"")
-            else:
-                pg.changeLabel(infoLabel,"You can only click one pile")
-                pg.playSound(badsound)
-        while pg.mousePressed():
-            pg.tick(50)
-        drawScreen(piles, numberchosen, pilechosen)
-        pg.updateDisplay()
-        pg.tick(50)
-    return 1
+    def mouseMoved(self, e):
+        self.theCanvas.delete(self.movetext)
+        self.movetext = self.theCanvas.create_text(20, 20, text=f"moved to {e.x}, {e.y}", anchor="nw")
 
-# main game
-piles = setupGame()
-gameRunning = True
-while gameRunning:
-    pilechosen, numberchosen = playerMove()
-    piles[pilechosen] -= numberchosen
-    drawScreen(piles,0,0)
-    # now the computer makes a move!
-    pg.changeLabel(infoLabel,"Computer Move")
-    pg.pause(2000)
+    def mouseClicked(self, e):
+        self.theCanvas.delete(self.clickText)
+        self.clickText = self.theCanvas.create_text(750, 20, text=f"Clicked at {e.x}, {e.y}", anchor="ne")
+
+    def canvasButtonClicked(self, e):
+        if self.is_player_turn and self.selected_stones > 0:
+            self.theCanvas.itemconfigure(self.canvasbutton, fill="green")
+            self.after(500, self.restorebutton)
+            self.is_player_turn = False
+            self.selected_stones = 0
+            self.update_turn_display()
+            self.after(1000, self.computer_move)  # Computer moves after player
+
+    def restorebutton(self):
+        self.theCanvas.itemconfigure(self.canvasbutton, fill="blue")
+
+    def update_turn_display(self):
+        self.theCanvas.delete(self.turn_text)
+        turn_msg = "Your Turn" if self.is_player_turn else "Computer's Turn"
+        self.turn_text = self.theCanvas.create_text(400, 50, text=turn_msg, 
+                                                  font=self.buttonfont, fill="black")
+
+    def update_status(self, message):
+        self.theCanvas.delete(self.buttonText)
+        self.buttonText = self.theCanvas.create_text(400, 20, text=message, font=self.buttonfont)
+
+    def check_game_state(self):
+        if sum(self.piles) == 0:
+            winner = "You Win!" if not self.is_player_turn else "Computer Wins!"
+            self.theCanvas.delete(self.turn_text)
+            self.turn_text = self.theCanvas.create_text(400, 50, 
+                                                      text=winner, 
+                                                      font=self.buttonfont, fill="red")
+            self.theCanvas.unbind("<Button-1>")
+            self.theCanvas.tag_unbind(self.canvasbutton, "<Button-1>")
+
+    def reset_game(self):
+        for pile in self.stones:
+            for stone in pile:
+                self.theCanvas.delete(stone)
+        self.theCanvas.delete(self.turn_text)
+        self.theCanvas.delete(self.buttonText)
+        self.theCanvas.delete(self.clickText)
+        self.theCanvas.delete(self.movetext)
+        self.is_player_turn = True
+        self.selected_stones = 0
+        self.DrawStones()
+        self.update_turn_display()
+        self.theCanvas.bind("<Button-1>", self.mouseClicked)
+        self.theCanvas.tag_bind(self.canvasbutton, "<Button-1>", self.canvasButtonClicked)
+
+if __name__ == "__main__":
+    app = NimGame()
