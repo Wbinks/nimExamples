@@ -30,22 +30,27 @@ class Main(tk.Tk):
 
         self.columnchosen = None
         self.numberchosen = 0
-        self.gameState = 0 # 0 is human turn
+        self.gamestate = 0 # 0 is human turn
         self.stonepics = []
         self.setupGame()
         self.mainloop()
 
 
     def doneclicked(self):
+        if self.gamestate == 1:  # computer's turn, so no clicking allowed
+            return
         print("Player move done")
         self.piles[self.columnchosen] -= self.numberchosen
         self.columnchosen = None
         self.numberchosen = 0
         self.drawBoard()
+        self.gamestate = 1
         # now Do Computer Turn!
 
 
     def undoclicked(self):
+        if self.gamestate == 1:  # computer's turn, so no clicking allowed
+            return
         self.columnchosen = None
         self.numberchosen = 0
         self.drawBoard()
@@ -55,6 +60,8 @@ class Main(tk.Tk):
         self.movetext = self.theCanvas.create_text(20,20, text=f"moved to {e.x}, {e.y}", anchor="nw")
 
     def mouseClicked(self,e):
+        if self.gamestate == 1:  # computer's turn, so no clicking allowed
+            return
         column = e.x//200
         self.theCanvas.delete(self.infotext)
         self.infotext = self.theCanvas.create_text(750,20, text=f"Chose Column {column}", anchor="ne")
@@ -96,3 +103,6 @@ class Main(tk.Tk):
             y = 300
 
 app = Main()
+
+
+        
