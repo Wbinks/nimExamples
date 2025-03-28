@@ -3,10 +3,10 @@ from tkinter import font as tkFont
 import random
 
 class NimGame(tk.Tk):
-    def __init__(self, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
+    def __init__(self):
+        tk.Tk.__init__(self)
         self.geometry("950x900+450+0")
-        self.title("Nim Game vs Computer")
+        self.title("Nim Game")
         
         self.theCanvas = tk.Canvas(self, width=800, height=900, bg="#ddddff")
         self.theCanvas.grid(row=0, column=0)
@@ -57,9 +57,8 @@ class NimGame(tk.Tk):
             stone = self.stones[pile_idx].pop()
             self.theCanvas.delete(stone)
             self.update_status(f"Player removed stone from pile {pile_idx + 1}")
-
+            self.check_game_state()
     def computer_move(self):
-        # Simple AI: Remove 1-3 stones from a random non-empty pile
         available_piles = [i for i, size in enumerate(self.piles) if size > 0]
         if not available_piles:
             return
@@ -74,7 +73,7 @@ class NimGame(tk.Tk):
                 self.theCanvas.delete(stone)
         
         self.update_status(f"Computer removed {stones_to_remove} stone(s) from pile {pile + 1}")
-        self.after(1000, self.check_game_state)  # Delay to show computer's move
+        self.after(1000, self.check_game_state)  
         self.is_player_turn = True
         self.update_turn_display()
 
@@ -99,10 +98,10 @@ class NimGame(tk.Tk):
         self.theCanvas.itemconfigure(self.canvasbutton, fill="blue")
 
     def update_turn_display(self):
-        self.theCanvas.delete(self.turn_text)
-        turn_msg = "Your Turn" if self.is_player_turn else "Computer's Turn"
-        self.turn_text = self.theCanvas.create_text(400, 50, text=turn_msg, 
-                                                  font=self.buttonfont, fill="black")
+        if sum(self.piles) > 0 :
+            self.theCanvas.delete(self.turn_text)
+            turn_msg = "Your Turn" if self.is_player_turn else "Computer's Turn"
+            self.turn_text = self.theCanvas.create_text(400, 50, text=turn_msg, font=self.buttonfont, fill="black")
 
     def update_status(self, message):
         self.theCanvas.delete(self.buttonText)
@@ -112,9 +111,7 @@ class NimGame(tk.Tk):
         if sum(self.piles) == 0:
             winner = "You Win!" if not self.is_player_turn else "Computer Wins!"
             self.theCanvas.delete(self.turn_text)
-            self.turn_text = self.theCanvas.create_text(400, 50, 
-                                                      text=winner, 
-                                                      font=self.buttonfont, fill="red")
+            self.turn_text = self.theCanvas.create_text(400, 50,text=winner, font=self.buttonfont, fill="red")
             self.theCanvas.unbind("<Button-1>")
             self.theCanvas.tag_unbind(self.canvasbutton, "<Button-1>")
 
