@@ -73,7 +73,7 @@ class Main(tk.Tk):
             self.theCanvas.itemconfig(self.infotext,text="OK")
             self.numberchosen +=1
             if self.piles[self.columnchosen]<self.numberchosen:
-                self.numberchosen = self.piles
+                self.numberchosen = self.piles[self.columnchosen]
             self.drawBoard()
 
     def setupGame(self):
@@ -91,12 +91,12 @@ class Main(tk.Tk):
 
         y = 300
         x = 100
-        for pilenumn in range(len(self.piles)):
-            if pilenumn == self.columnchosen:
+        for pilenum in range(len(self.piles)):
+            if pilenum == self.columnchosen:
                 reduction = self.numberchosen
             else:
                 reduction = 0
-            for stoneNum in range(self.piles[pilenumn] - reduction):
+            for stoneNum in range(self.piles[pilenum] - reduction):
                 self.stonepics.append(self.theCanvas.create_image(x,y,image=self.stonepic))
                 y += 50
             x += 200
